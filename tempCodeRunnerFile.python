@@ -1,0 +1,92 @@
+from kivy.app import App
+from kivy.uix.boxlayout import BoxLayout
+from kivy.uix.button import Button
+from kivy.uix.label import Label
+from kivy.uix.textinput import TextInput
+from kivy.uix.togglebutton import ToggleButton
+from kivy.uix.scrollview import ScrollView
+import datetime
+from converting_msg import Converter
+import pandas as pd
+
+class KivyApp(App):
+    def build(self):
+        self.data = {'Number': list(range(1, 101)),
+                     'Price': [0] * 100}
+        self.df = pd.DataFrame(self.data)
+        self.result_label = Label(text='', size_hint=(1, None), height=50)
+        self.output_label = Label(text='', size_hint=(1, None), height=50)
+        self.message_input = TextInput(text='Paste your message here...', multiline=False)
+        self.convert_button = Button(text='Convert It')
+        self.reset_button = Button(text='Reset Table')
+        self.options = ToggleButton(text='GALI', group='options')
+        self.options.bind(on_press=self.on_option_selected)
+        self.options1 = ToggleButton(text='DESAWAR', group='options')
+        self.options1.bind(on_press=self.on_option_selected)
+        self.options2 = ToggleButton(text='GAZIABAD', group='options')
+        self.options2.bind(on_press=self.on_option_selected)
+        self.options3 = ToggleButton(text='FARIDABAD', group='options')
+        self.options3.bind(on_press=self.on_option_selected)
+
+        layout = BoxLayout(orientation='vertical')
+
+        input_layout = BoxLayout(orientation='horizontal')
+        input_layout.add_widget(Label(text='ENTER YOUR MESSAGE'))
+        input_layout.add_widget(self.message_input)
+        input_layout.add_widget(self.convert_button)
+        layout.add_widget(input_layout)
+
+        layout.add_widget(self.options)
+        layout.add_widget(self.options1)
+        layout.add_widget(self.options2)
+        layout.add_widget(self.options3)
+
+        self.output_scroll = ScrollView()
+        self.output_scroll.add_widget(self.output_label)
+        layout.add_widget(self.output_scroll)
+
+        layout.add_widget(self.reset_button)
+        layout.add_widget(self.result_label)
+
+        self.convert_button.bind(on_press=self.convert_message)
+        self.reset_button.bind(on_press=self.reset_table)
+
+        return layout
+
+    def convert_message(self, instance):
+        message = self.message_input.text
+        working = Converter.convert(message)
+        sumation = 0
+        if isinstance(working, str):
+            self.output_label.text = 'Unsupported input string!'
+            return
+        for price, lst in working.items():
+            price = int(price) if not isinstance(price, int) else price
+            lst = [int(item) if not isinstance(item, int) else item for item in lst]
+            self.df.loc[self.df['Number'].isin(lst), 'Price'] += price
+            sumation = sum(self.df['Price'])
+        reshaped_df = self.df.values.reshape(10, 10, 2)
+        matrix = []
+        for row in reshaped_df:
+            formatted_row = []
+            for cell in row:
+                formatted_value = f"{cell[0]}  \n  [{cell[1]}]"
+                formatted_row.append(formatted_value)
+            matrix.append(formatted_row)
+        table_df = pd.DataFrame(matrix)
+        self.output_label.text = table_df.to_string(index=False, header=False)
+        self.result_label.text = f'Total amount: {sumation}'
+
+    def reset_table(self, instance):
+        self.df['Price'] = 0
+        self.output_label.text = ''
+        self.result_label.text = ''
+
+    def on_option_selected(self, instance):
+        self.options.text = instance.text
+        current_datetime = datetime.datetime.now()
+        formatted_datetime = current_datetime.strftime("%d-%m-%Y %I:%M %p")
+        self.result_label.text = f'{self.options.text}\t\t{formatted_datetime}'
+
+if __name__ == '__main__':
+    KivyApp().run()
